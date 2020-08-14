@@ -35,7 +35,7 @@ function pv_prediction_error_data(data::Array{Float64,2}, ar_model_weights::Arra
 
        if t == 1
 
-           previous_pv = zeros(n_days) # pv is null at 23:45
+           previous_pv = zeros(n_days) # pv is null at 23:30
            previous_pv = hcat(previous_pv, ones(n_days))
            predicted_pv = previous_pv*ar_model_weights[1, :]
            effective_pv = data[1, :]

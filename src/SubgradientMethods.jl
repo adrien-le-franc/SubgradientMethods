@@ -1,5 +1,6 @@
 module SubgradientMethods
 
-greet() = print("Hello World!")
+include("struct.jl")
+include("optimize.jl")
 
 end # module
