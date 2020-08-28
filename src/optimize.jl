@@ -6,9 +6,10 @@ call_oracle!(oracle::AbstractOracle, variable::Array{Float64,1}, k::Int64) = not
 function make_step(variable::Array{Float64,1}, projection::AbstractProjection, 
 	parameters::Parameters, subgradient::Array{Float64,1}, k::Int64)
 
-	return variable .- parameters.step_size(k)*subgradient
+	variable =  variable .- parameters.step_size(k)*subgradient
 
 	# projection ?
+	return projection.project(variable)
 
 end
 

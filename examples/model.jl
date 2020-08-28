@@ -16,7 +16,7 @@ directory = @__DIR__
 
 peak_power = 1000. # kW
 price = 0.15 # EUR/kWh
-penalty_coefficient = 0.5
+penalty_coefficient = 1.5
 
 max_battery_capacity = 1000. # kWh
 max_battery_power = 1000. # kW
@@ -53,7 +53,7 @@ function dynamics(t::Int64, state::Array{Float64,1}, control::Array{Float64,1},
 
 	scale_factor = max_battery_power*dt/max_battery_capacity
 	normalized_exchanged_power = rho_c*max(0., control[1]) - max(0., -control[1])/rho_d
-    soc = state[1] + normalized_exchanged_power
+    soc = state[1] + normalized_exchanged_power*scale_factor
 
     predicted_pv = min(max(weights[t, :]'*[state[2], 1.] + noise[1], 0.), 1.)
 
@@ -75,7 +75,7 @@ function stage_cost(t::Int64, state::Array{Float64,1}, control::Array{Float64,1}
 end
 
 function final_cost(state::Array{Float64,1}, parameter::Array{Float64,1})
-	-price*state[1]*max_battery_capacity*01 # to be tuned ?
+	-price*state[1]*max_battery_capacity 
 end
 
 # cost subgradients
@@ -85,13 +85,13 @@ function stage_cost_subgradient(t::Int64, state::Array{Float64,1}, control::Arra
 
 	power_production = min(max(weights[t, :]'*[state[2], 1.] + noise[1], 0.), 1.)*peak_power
 	power_delivery = power_production - control[1]*max_battery_power # in kW
-	subgradient_absolute_delivery_gap = sign(parameter[t] - power_delivery)
+	subgradient_absolute_delivery_gap = sign(power_delivery - parameter[t])
 
-	subgradient_generated_power = [0., -price*dt*penalty_coefficient*(
-		weights[t, 1]*subgradient_absolute_delivery_gap)]
+	subgradient_generated_power = [0., price*dt*penalty_coefficient*(
+		weights[t, 1]*peak_power*subgradient_absolute_delivery_gap)]
 
 	subgradient_parameter = zeros(horizon)
-	subgradient_parameter[t] = price*dt*(-parameter[t] + 
+	subgradient_parameter[t] = -price*dt*(1. + 
 		penalty_coefficient*subgradient_absolute_delivery_gap)
 
 	return vcat(subgradient_generated_power, subgradient_parameter)
@@ -99,7 +99,7 @@ function stage_cost_subgradient(t::Int64, state::Array{Float64,1}, control::Arra
 end
 
 function final_cost_subgradient(state::Array{Float64,1}, parameter::Array{Float64,1})
-	return vcat([-price*max_battery_capacity*0.1, 0.], zeros(horizon))
+	return vcat([-price*max_battery_capacity, 0.], zeros(horizon))
 end
 
 # model
