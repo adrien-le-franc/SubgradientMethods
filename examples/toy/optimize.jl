@@ -57,7 +57,7 @@ projection = HyperCubeProjection(peak_power)
 
 # parametrers
 
-step_size(k::Int64) = 2000/k
+step_size(k::Int64) = 3000/k
 parameters = SubgradientMethods.Parameters(zeros(48), 50, step_size)
 
 # let's do it !

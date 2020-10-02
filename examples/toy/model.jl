@@ -10,13 +10,14 @@ using StoOpt
 using JLD
 
 directory = @__DIR__
+package_directory = joinpath(directory, "..", "..")
 
 
 # physical values
 
 peak_power = 1000. # kW
 price = 0.15 # EUR/kWh
-penalty_coefficient = 1.5
+penalty_coefficient = 2.
 
 max_battery_capacity = 1000. # kWh
 max_battery_power = 1000. # kW
@@ -41,8 +42,23 @@ controls = PM.Controls(horizon, -1:du:1)
 
 # noises
 
-data = load(joinpath(directory, "..", "data", "data.jld"))
+data = load(joinpath(package_directory, "data", "data.jld"))
 noises = StoOpt.Noises(data["error_data"], 10)
+
+# indicator of control set subgradient
+
+function indicator_of_control_set_subgradient(t::Int64, state::Array{Float64,1},
+	control::Array{Float64,1}, parameter::Array{Float64,1})
+	control = control[1]
+	soc = state[1]
+	if control*rho_c*dt*max_battery_power + (soc - 1)*max_battery_capacity == 0.
+		return vcat([1., 0.], zeros(horizon))
+	elseif -control*dt*max_battery_power/rho_d - soc*max_battery_capacity == 0.
+		return vcat([-1., 0.], zeros(horizon))
+	else
+		return zeros(2+horizon)
+	end
+end
 
 # dynamics
 
@@ -58,6 +74,20 @@ function dynamics(t::Int64, state::Array{Float64,1}, control::Array{Float64,1},
     predicted_pv = min(max(weights[t, :]'*[state[2], 1.] + noise[1], 0.), 1.)
 
     return [soc, predicted_pv]
+
+end
+
+# dynamics jacobian
+
+function dynamics_jacobian(t::Int64, state::Array{Float64,1}, control::Array{Float64,1}, 
+	parameter::Array{Float64,1})
+	
+	Axx = sparse([1. 0. ; 0. weights[t, 1]])
+	Axp = spzeros(2, horizon)
+	Apx = spzeros(horizon, 2)
+	App = I
+
+	return [Axx Axp ; Apx App]
 
 end
 
@@ -114,6 +144,8 @@ model = PM.ParametricMultistageModel(
 	horizon,
 	zeros(horizon),
 	zeros(2),
+	indicator_of_control_set_subgradient,
+	dynamics_jacobian,
 	stage_cost_subgradient,
 	final_cost_subgradient)
 
