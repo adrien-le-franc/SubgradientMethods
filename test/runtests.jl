@@ -27,7 +27,7 @@ using Dates
 	oracle = TestOracle()
 	projection = HyperCubeProjection()
 	step_size(k::Int64) = 1/k
-	parameters = SM.Parameters(rand(10), 50, step_size, Second(10), 0.01)
+	parameters = SM.Parameters(rand(10), step_size, 50, Second(10), 0.01)
     output = SM.optimize!(oracle, projection, parameters)
 
     @test output.iteration <= 50

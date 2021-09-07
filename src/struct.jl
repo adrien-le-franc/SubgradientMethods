@@ -9,8 +9,8 @@ abstract type AbstractProjection end
 
 struct Parameters
 	initial_variable::Array{Float64,1}
-	max_iterations::Int64
 	step_size::Function
+	max_iterations::Int64
 	max_time::Period
 	epsilon::Float64
 end
@@ -26,23 +26,30 @@ mutable struct Output
 	subgradient_norm::Float64
 	final_iteration::Int64
 	elapsed::Period
+	elapsed_per_oracle_call::Array{Float64,1}
+	all_values::Array{Float64,1}
 end
 
-Output(variable::Array{Float64,1}) = Output(Inf, variable, 0, Inf, 0, Second(0))
+Output(variable::Array{Float64,1}) = Output(Inf, variable, 0, Inf, 0, Second(0), Float64[], Float64[])
 
 function update_output!(output::Output, k::Int64, objective::Float64, 
-	subgradient::Array{Float64,1}, variable::Array{Float64,1}, starting_time::DateTime)
+	subgradient::Array{Float64,1}, variable::Array{Float64,1}, 
+	starting_time::DateTime, elapsed_per_oracle_call::Float64)
 
 	if objective < output.value
 
 		output.value = objective
 		output.variable = variable
 		output.iteration = k
-		output.subgradient_norm = sqrt(subgradient'*subgradient)
+		output.subgradient_norm = norm(subgradient)
 
 	end
+
+	push!(output.elapsed_per_oracle_call, elapsed_per_oracle_call)
+	push!(output.all_values, objective)
 
 	output.final_iteration = k
 	output.elapsed = now() - starting_time
 
 end
+

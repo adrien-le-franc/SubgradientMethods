@@ -11,7 +11,7 @@ function make_step(variable::Array{Float64,1}, projection::AbstractProjection,
 
 end
 
-function stopping_test(output::Output, parameters::Parameters)
+function stopping_test(oracle::AbstractOracle, output::Output, parameters::Parameters)
 
 	if (output.elapsed > parameters.max_time || output.subgradient_norm < parameters.epsilon)
 		return true
@@ -30,11 +30,11 @@ function optimize!(oracle::AbstractOracle, projection::AbstractProjection,
 
 	for k in steps(parameters)
 
-		objective, subgradient = call_oracle!(oracle, variable, k)
+		t = @elapsed objective, subgradient = call_oracle!(oracle, variable, k)
 		variable = make_step(variable, projection, parameters, subgradient, k)
-		update_output!(output, k, objective, subgradient, variable, starting_time)
+		update_output!(output, k, objective, subgradient, variable, starting_time, t)
 
-		if stopping_test(output, parameters)
+		if stopping_test(oracle, output, parameters)
 			return output
 			break
 		end
